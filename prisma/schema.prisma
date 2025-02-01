@@ -1,0 +1,369 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  MERCHANT
+  ADMIN
+  SUPPORT
+}
+
+enum AccountType {
+  WALLET
+  SAVINGS
+  CURRENT
+  BUSINESS
+  LOAN
+}
+
+enum TransactionType {
+  TRANSFER
+  DEPOSIT
+  WITHDRAWAL
+  PAYMENT
+  REFUND
+  CHARGE
+  FEE
+  AIRTIME
+  DATA
+  UTILITY_BILL
+}
+
+enum TelecomNetwork {
+  MTN
+  AIRTEL
+  GLO
+  ETISALAT
+  VODACOM
+  SAFARICOM
+  ORANGE
+  TIGO
+}
+
+enum UtilityType {
+  ELECTRICITY
+  WATER
+  INTERNET
+  CABLE_TV
+  GAS
+  WASTE_MANAGEMENT
+}
+
+enum UtilityProvider {
+  IKEDC
+  EKEDC
+  PHCN
+  LAGOS_WATER
+  GO_TV
+  DSTV
+  MULTICHOICE
+  SHELL_GAS
+}
+
+
+
+
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REVERSED
+}
+
+enum CardType {
+  VIRTUAL
+  PHYSICAL
+  CREDIT
+  DEBIT
+  PREPAID
+}
+
+model User {
+  id               String         @id @default(uuid())
+  email            String         @unique
+  passwordHash     String
+  firstName        String?
+  lastName         String?
+  phone            String?
+  role             UserRole       @default(CUSTOMER)
+  emailVerified    Boolean        @default(false)
+  verificationToken String?       @unique
+  resetToken       String?        @unique
+  resetTokenExpiry DateTime?
+  twoFactorEnabled Boolean        @default(false)
+  twoFactorSecret  String?
+  accounts         Account[]
+  paymentMethods   PaymentMethod[]
+  cards            Card[]
+  loans            Loan[]
+  merchants        Merchant[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([email, role, createdAt])
+  APIKey APIKey[]
+  Address Address[]
+}
+
+model Account {
+  id             String        @id @default(uuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  accountNumber  String        @unique
+  type           AccountType
+  currencyCode   String        @default("USD")
+  balance        Decimal       @default(0)
+  ledgerBalance  Decimal       @default(0)
+  isActive       Boolean       @default(true)
+  transactions   Transaction[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  sentTransaction Transaction[] @relation("SentTransactions")
+  receivedTransactions Transaction[] @relation("ReceivedTransactions")
+
+  @@index([userId, accountNumber, type, balance])
+  Card Card[]
+  Loan Loan[]
+}
+
+model Transaction {
+  id              String            @id @default(uuid())
+  fromAccountId   String?
+  toAccountId     String?
+  fromAccount     Account?          @relation("SentTransactions", fields: [fromAccountId], references: [id])
+  toAccount       Account?          @relation("ReceivedTransactions", fields: [toAccountId], references: [id])
+  amount          Decimal
+  currencyCode    String            @default("USD")
+  exchangeRate    Decimal?          @default(1.0)
+  type            TransactionType
+  status          TransactionStatus @default(PENDING)
+  description     String?
+  reference       String?           @unique
+  metadata        Json?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  serviceProvider String?  
+  customerReference String?
+  beneficiary      String?
+  Account Account[]
+  Merchant Merchant[]
+  Transfer Transfer[]
+  UtilityPayment UtilityPayment[]
+  AirtimePurchase AirtimePurchase[]
+  DataPurchase DataPurchase[]
+
+  @@index([fromAccountId, toAccountId, type, status, createdAt])
+}
+
+model PaymentMethod {
+  id            String      @id @default(uuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  type          String     
+  provider      String?    
+  last4         String?
+  fingerprint   String?     @unique
+  isDefault     Boolean     @default(false)
+  metadata      Json?
+  expiresAt     DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([userId, type, isDefault])
+}
+
+model Transfer {
+  id              String     @id @default(uuid())
+  transactionId   String     @unique
+  transaction     Transaction @relation(fields: [transactionId], references: [id])
+  fee             Decimal    @default(0)
+  gateway         String?
+  gatewayResponse Json?
+  createdAt       DateTime  @default(now())
+}
+
+model Card {
+  id             String    @id @default(uuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+  accountId      String
+  account        Account   @relation(fields: [accountId], references: [id])
+  type           CardType
+  last4          String
+  expiryMonth    Int
+  expiryYear     Int
+  cvvHash        String?
+  issuer         String?
+  status         String    @default("active")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId, accountId, type, status])
+}
+
+model Loan {
+  id              String     @id @default(uuid())
+  userId          String
+  user            User       @relation(fields: [userId], references: [id])
+  accountId       String
+  account         Account    @relation(fields: [accountId], references: [id])
+  principal       Decimal
+  interestRate    Decimal
+  termMonths      Int
+  amountDue       Decimal
+  dueDate         DateTime
+  status          String     @default("active")
+  payments        LoanPayment[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model LoanPayment {
+  id              String     @id @default(uuid())
+  loanId          String
+  loan            Loan       @relation(fields: [loanId], references: [id])
+  amount          Decimal
+  principalPaid   Decimal
+  interestPaid    Decimal
+  paymentDate     DateTime  @default(now())
+  reference       String?    @unique
+  createdAt       DateTime  @default(now())
+}
+
+model Merchant {
+  id              String     @id @default(uuid())
+  userId          String
+  user            User       @relation(fields: [userId], references: [id])
+  businessName    String
+  website         String?
+  apiKey          String     @unique
+  webhookUrl      String?
+  successUrl      String?
+  failureUrl      String?
+  transactions    Transaction[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId, businessName])
+}
+
+model Notification {
+  id              String     @id @default(uuid())
+  userId          String
+  user            User       @relation(fields: [userId], references: [id])
+  type            String     // "transaction", "security", "promotion"
+  title           String
+  message         String
+  isRead          Boolean    @default(false)
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+}
+
+model AuditLog {
+  id              String     @id @default(uuid())
+  userId          String?
+  user            User?      @relation(fields: [userId], references: [id])
+  action          String
+  entityType      String
+  entityId        String?
+  previousState   Json?
+  newState        Json?
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime  @default(now())
+
+  @@index([userId, action, entityType, createdAt])
+}
+
+model APIKey {
+  id              String     @id @default(uuid())
+  userId          String
+  user            User       @relation(fields: [userId], references: [id])
+  key             String     @unique
+  name            String
+  scopes          String[]
+  expiresAt       DateTime?
+  lastUsedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId, key])
+}
+
+model Address {
+  id              String     @id @default(uuid())
+  userId          String
+  user            User       @relation(fields: [userId], references: [id])
+  street          String?
+  city            String?
+  state           String?
+  country         String
+  postalCode      String?
+  isPrimary       Boolean    @default(false)
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+
+
+
+
+// Add these models to existing schema
+model AirtimePurchase {
+  id            String     @id @default(uuid())
+  transactionId String     @unique
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  network       TelecomNetwork
+  phoneNumber   String
+  amount        Decimal
+  discount      Decimal    @default(0)
+  createdAt     DateTime  @default(now())
+
+  @@index([network, phoneNumber, createdAt])
+}
+
+model DataPurchase {
+  id            String     @id @default(uuid())
+  transactionId String     @unique
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  network       TelecomNetwork
+  phoneNumber   String
+  dataPlan      String     // e.g "1GB Daily Plan"
+  validityDays  Int
+  amount        Decimal
+  createdAt     DateTime  @default(now())
+
+  @@index([network, dataPlan, createdAt])
+}
+
+model UtilityPayment {
+  id              String     @id @default(uuid())
+  transactionId   String     @unique
+  transaction     Transaction @relation(fields: [transactionId], references: [id])
+  utilityType     UtilityType
+  provider        UtilityProvider
+  customerId      String
+  meterNumber     String?
+  amount          Decimal
+  servicePeriod   String?    
+  reference       String?    @unique
+  createdAt       DateTime  @default(now())
+  @@index([utilityType, provider, customerId, createdAt])
+}
