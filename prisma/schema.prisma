@@ -7,12 +7,16 @@
 generator client {
   provider = "prisma-client-js"
 }
-
 datasource db {
-  provider  = "postgresql"
+  provider  = "mysql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
+
+// datasource db {
+//   provider  = "postgresql"
+//   url       = env("DATABASE_URL")
+//   directUrl = env("DIRECT_URL")
+// }
 
 enum UserRole {
   CUSTOMER
@@ -113,6 +117,7 @@ model User {
   merchants        Merchant[]
   notifications    Notification[]
   auditLogs        AuditLog[]
+  transactions      Transaction[]
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
@@ -136,10 +141,10 @@ model Account {
   updatedAt      DateTime     @updatedAt
   sentTransaction Transaction[] @relation("SentTransactions")
   receivedTransactions Transaction[] @relation("ReceivedTransactions")
-
-  @@index([userId, accountNumber, type, balance])
   Card Card[]
   Loan Loan[]
+
+  @@index([userId, accountNumber, type, balance])
 }
 
 model Transaction {
@@ -148,6 +153,8 @@ model Transaction {
   toAccountId     String?
   fromAccount     Account?          @relation("SentTransactions", fields: [fromAccountId], references: [id])
   toAccount       Account?          @relation("ReceivedTransactions", fields: [toAccountId], references: [id])
+  user            User              @relation(fields: [userId], references: [id])
+  userId          String
   amount          Decimal
   currencyCode    String            @default("USD")
   exchangeRate    Decimal?          @default(1.0)
@@ -297,7 +304,7 @@ model APIKey {
   user            User       @relation(fields: [userId], references: [id])
   key             String     @unique
   name            String
-  scopes          String[]
+  // scopes          String[]
   expiresAt       DateTime?
   lastUsedAt      DateTime?
   createdAt       DateTime  @default(now())
