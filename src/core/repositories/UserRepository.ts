@@ -33,4 +33,14 @@ export class UserRepository {
     const user = await prisma?.user.findMany();
     return user ? user : null;
   }
+
+  async delete(id: string): Promise<User | null> {
+    const user = await prisma?.user.delete({where : { id }});
+    return user ? new User(user) : null;
+  }
+
+  async update(userId:string, updateData: Partial<User>): Promise<User | null> {
+    const user = await prisma?.user.update({ data : updateData , where : { id:userId }});
+    return user ? new User(user) : null;
+  }
 }

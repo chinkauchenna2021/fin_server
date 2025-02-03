@@ -20,6 +20,7 @@ export class Transaction {
   
     airtimePurchase?: AirtimePurchase; // Add this relationship
     dataPurchase?: DataPurchase;
+    user: any;
 
   constructor(data: Partial<Transaction>) {
     Object.assign(this, data);
