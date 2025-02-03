@@ -7,7 +7,7 @@ const app: Express = express();
 const port = 4000;
 
 app.get("/", (req: Request, res: Response) => {
-  res.send("Express + TypeScript Server");
+  res.send("Fintech server is currently running on"+ process.env.PORT);
 });
 
 app.listen(port, () => {
