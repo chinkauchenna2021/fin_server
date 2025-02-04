@@ -5,7 +5,8 @@ declare global {
     interface Request {
       userId?: string; 
       user?: User;  
-      userRole?:string
+      userRole?:string;
+      userIsAdmin?:string
     }
   }
 }

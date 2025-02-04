@@ -11,7 +11,7 @@ export class LoanController {
   static async applyForLoan(req: Request, res: Response) {
     try {
       const { principal, interestRate, termMonths, dueDate, paymentSchedule } = req.body;
-      const userId = req.userId!;
+      const userId = req.userId!; // Ensure userId is available from auth middleware
       const accountId = req.body.accountId;
 
       const loan = await loanRepository.createLoan(
@@ -97,36 +97,6 @@ export class LoanController {
     } catch (error) {
       console.error('Loan payment error:', error);
       res.status(400).json({ error: 'Failed to process loan payment' });
-    }
-  }
-
-  /**
-   * Get overdue loans (Admin only)
-   */
-  static async getOverdueLoans(req: Request, res: Response) {
-    try {
-      const page = parseInt(req.query.page as string) || 1;
-      const pageSize = parseInt(req.query.pageSize as string) || 10;
-
-      const loans = await loanRepository.getOverdueLoans(page, pageSize);
-      res.json(loans);
-    } catch (error) {
-      console.error('Get overdue loans error:', error);
-      res.status(500).json({ error: 'Failed to retrieve overdue loans' });
-    }
-  }
-
-  /**
-   * Update loan status (Admin only)
-   */
-  static async updateLoanStatus(req: Request, res: Response) {
-    try {
-      const loanId = req.params.id;
-      const updatedLoan = await loanRepository.updateLoanStatus(loanId);
-      res.json(updatedLoan);
-    } catch (error) {
-      console.error('Update loan status error:', error);
-      res.status(400).json({ error: 'Failed to update loan status' });
     }
   }
 }

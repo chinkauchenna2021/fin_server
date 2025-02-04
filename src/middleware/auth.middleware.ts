@@ -11,13 +11,3 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
   req.userId = userId;
   next();
 };
-
-export const adminMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  // Add logic to check if user is admin
-  next();
-};
-
-export const merchantMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  // Add logic to check if user is a merchant
-  next();
-};
