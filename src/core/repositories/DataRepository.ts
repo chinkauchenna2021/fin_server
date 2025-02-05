@@ -1,6 +1,8 @@
 import { PrismaClient, DataPurchase as PrismaDataPurchase, TransactionStatus } from '@prisma/client';
 import { DataPurchase } from '../entities/DataPurchase';
 import { TelecomNetwork } from '@prisma/client';
+import { DataPurchaseValidation } from '../../types/data.types';
+import { isValid } from 'zod';
 
 const prisma = new PrismaClient();
 
@@ -140,10 +142,56 @@ export class DataRepository {
    * @param userId - User ID to filter by
    * @returns Array of active DataPurchase entities
    */
-  async findActivePurchases(userId: string): Promise<DataPurchase[]> {
+  async findActivePurchases(userId: string, page: number, pageSize: number): Promise<DataPurchase[]> {
     const dataPurchases = await this.findByUserId(userId);
     return dataPurchases.filter(dp => 
       new Date(dp.createdAt.getTime() + dp.validityDays * 86400000) > new Date()
     );
+  }
+
+  // phoneNumber,
+  // planId,
+  // provider
+
+
+    // export interface DataPurchaseValidation {
+    //   isValid: boolean;            // Whether the purchase is valid
+    //   validationMessage: string;   // Message describing the validation result
+    //   planDetails?: PlanDetails;   // Optional details about the plan
+    //   estimatedDelivery?: string;  // Optional estimated delivery time (ISO format)
+    // }
+    // planData
+    // name: string;        // Name of the data plan (e.g., "2GB Daily Plan")
+    // dataAmount: string;  // Amount of data (e.g., "2GB")
+    // validity: string;    // Validity period (e.g., "24 hours")
+    // price: number;       
+
+
+  async validatePurchase(phoneNumber: string, planId: string, provider: string): Promise<DataPurchaseValidation | any> {
+    const dataPurchases = await this.findById(phoneNumber);
+    // DataPurchaseValidation
+    // return dataPurchases.filter(dp => 
+    //   new Date(dp.createdAt.getTime() + dp.validityDays * 86400000) > new Date()
+    // );
+
+    if(dataPurchases?.id == undefined || dataPurchases.id == null){
+       return {
+         isValid:false,
+         validationMessage:" Data Purchase is not valid",
+    }
+  }else{
+
+    return {
+      isValid:true,
+      validationMessage:" Data Purchase is valid",
+      planDetails:{
+           name: dataPurchases?.dataPlan,       
+           dataAmount: dataPurchases?.parseDataPlanSize,
+           validity: dataPurchases?.isPlanValid,
+           price: dataPurchases?.amount,
+         },
+         estimatedDelivery:dataPurchases?.createdAt
+       }
+      }
   }
 }

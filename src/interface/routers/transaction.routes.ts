@@ -1,21 +1,18 @@
 import express from 'express';
 import {
-  createTransaction,
-  getTransactions,
-  getTransactionById,
-  updateTransactionStatus
-} from '../controllers/transaction.controller';
-import { authMiddleware } from '../middleware/auth.middleware';
-import { validate } from '../middleware/validation.middleware';
-import { transactionSchema } from '../validations/transaction.validation';
+       TransactionController
+} from '../../controllers/transaction.controller';
+import { authMiddleware } from '../../middleware/auth.middleware';
+import { validate } from '../../middleware/validation.middleware';
+import { transactionSchema } from '../../validations/transaction.validation';
 
 const router = express.Router();
+router.use(authMiddleware as any);
 
-router.use(authMiddleware);
-
-router.post('/', validate(transactionSchema), createTransaction);
-router.get('/', getTransactions);
-router.get('/:id', getTransactionById);
-router.patch('/:id/status', updateTransactionStatus);
+router.post('/', validate(transactionSchema), TransactionController.createTransaction);
+router.get('/', TransactionController.getUserTransactions);
+router.get('/merchant', TransactionController.getMerchantTransactions);
+router.get('/:id', TransactionController.getTransactionById as any);
+router.patch('/:id/status', TransactionController.updateTransactionStatus as any);
 
 export default router;
