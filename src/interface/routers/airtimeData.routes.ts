@@ -4,10 +4,10 @@ import {
   purchaseData,
   getAirtimePurchases,
   getDataPurchases
-} from '../controllers/airtimeData.controller';
-import { authMiddleware } from '../middleware/auth.middleware';
-import { validate } from '../middleware/validation.middleware';
-import { airtimeSchema, dataSchema } from '../validations/airtimeData.validation';
+} from '../../controllers/airtime.controller';
+import { authMiddleware } from '../../middleware/auth.middleware';
+import { validate } from '../../middleware/validation.middleware';
+import { airtimeSchema, dataSchema } from '../../validations/airtime.validation';
 
 const router = express.Router();
 
